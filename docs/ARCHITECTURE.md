@@ -76,7 +76,7 @@ in order:
    lacked, one more `shorturlinfo` call with it).
 
 Steps 2 and 3 take their record whole from whichever source succeeds — `sign`
-and `timestamp` are only valid as a pair *from those endpoints*, where the
+and `timestamp` are only valid as a pair _from those endpoints_, where the
 same response also supplies `shareid`/`uk`. If nothing works the share is
 returned as it was, and `/stream` / `/hls` retry the lookup on demand
 (writing the result back to the cache) before giving up.

@@ -443,6 +443,10 @@ export function hasSignature(record: {
   return Boolean(record.shareNumericId && record.uk && record.sign && record.timestamp);
 }
 
+function hasShareIds(record: { shareNumericId: string; uk: string }): boolean {
+  return Boolean(record.shareNumericId && record.uk);
+}
+
 function stringify(value: unknown): string {
   return value === undefined || value === null ? "" : String(value);
 }
@@ -467,6 +471,7 @@ async function callShortUrlInfo(
 ): Promise<ShareRecord | null> {
   const origins = [share.origin, ...MIRROR_ORIGINS.filter((o) => o !== share.origin)];
   const tokens = jsToken ? [jsToken, ""] : [""];
+  let partial: ShareRecord | null = null;
 
   for (const origin of origins) {
     for (const token of tokens) {
@@ -504,13 +509,14 @@ async function callShortUrlInfo(
           timestamp: stringify(data.timestamp),
         };
         if (hasSignature(record)) return record;
+        if (!partial && hasShareIds(record)) partial = record;
       } catch {
         // A walled, blocked or malformed answer from one origin says nothing
         // about the others.
       }
     }
   }
-  return null;
+  return partial;
 }
 
 /**
@@ -637,10 +643,20 @@ export async function hydrateShare(
       if (pair) return { ...share, sign: pair.sign, timestamp: pair.timestamp, jsToken };
     }
 
-    let record = await callShortUrlInfo(share, withKey, jsToken, budget);
+    let working = share;
+    let record = await callShortUrlInfo(working, withKey, jsToken, budget);
+    if (record) {
+      working = { ...working, ...record };
+      if (hasShareIds(working) && !hasSignature(working)) {
+        const pair = await callTplConfig(working, withKey, budget);
+        if (pair) {
+          return { ...working, sign: pair.sign, timestamp: pair.timestamp, jsToken };
+        }
+      }
+    }
 
     if (!record) {
-      const wap = await readWapRecord(share, withKey, budget);
+      const wap = await readWapRecord(working, withKey, budget);
       if (wap && hasSignature(wap.record)) {
         record = wap.record;
         jsToken = jsToken || wap.jsToken;
@@ -648,7 +664,7 @@ export async function hydrateShare(
         // The mobile page had no record, but it did have the token that the
         // share-info endpoint may have been refusing to answer without.
         jsToken = wap.jsToken;
-        record = await callShortUrlInfo(share, withKey, jsToken, budget);
+        record = await callShortUrlInfo(working, withKey, jsToken, budget);
       }
     }
 
@@ -948,7 +964,9 @@ export async function freshDownloadLink(
     }
   }
 
-  throw lastError ?? ApiError.upstreamUnexpected("TeraBox returned no download link for this file.");
+  throw (
+    lastError ?? ApiError.upstreamUnexpected("TeraBox returned no download link for this file.")
+  );
 }
 
 /**
