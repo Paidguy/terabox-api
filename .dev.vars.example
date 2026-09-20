@@ -1,0 +1,23 @@
+# Copy to `.dev.vars` (gitignored) and fill in your own values.
+# `wrangler dev` reads this file automatically for local secrets.
+#
+# Getting your cookie:
+#   1. Log in at terabox.com (use a throwaway account — this grants
+#      access to whatever account it belongs to).
+#   2. DevTools -> Application/Storage -> Cookies -> terabox.com.
+#   3. Copy the value of the `ndus` cookie.
+#
+# All three of these forms are accepted:
+#   TERABOX_COOKIE=ndus=YOUR_VALUE
+#   TERABOX_COOKIE=YOUR_VALUE
+#   TERABOX_COOKIE=ndus=VALUE_A,ndus=VALUE_B      <- rotates between accounts
+
+TERABOX_COOKIE=ndus=your_cookie_value_here
+
+# Optional: require `Authorization: Bearer <key>` on API routes.
+# API_KEY=choose_a_long_random_string
+
+# Optional tuning — see wrangler.toml for what each one does.
+# CACHE_TTL=1800
+# RATE_LIMIT=30
+# RATE_LIMIT_WINDOW=60

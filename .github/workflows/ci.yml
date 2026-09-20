@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: Typecheck, lint, and format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Format check
+        run: npm run format:check
+
+      - name: Verify it bundles for deploy
+        run: npx wrangler deploy --dry-run
+
+# There is deliberately no live-TeraBox smoke job here: it needs a live worker
+# and a live share link. Run `node scripts/smoke.mjs <url> <link>` by hand
+# after deploying instead (see README.md#checking-a-deployment).

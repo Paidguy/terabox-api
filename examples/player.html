@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TeraBox Player Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+      body {
+        font:
+          16px/1.5 -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        max-width: 40rem;
+        margin: 2rem auto;
+        padding: 0 1rem;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+      label {
+        display: block;
+        margin: 0.75rem 0 0.25rem;
+        font-size: 0.85rem;
+        opacity: 0.7;
+      }
+      input {
+        width: 100%;
+        padding: 0.5rem;
+        font: inherit;
+        box-sizing: border-box;
+      }
+      button {
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        font: inherit;
+        cursor: pointer;
+      }
+      video {
+        width: 100%;
+        margin-top: 1.5rem;
+        background: #000;
+      }
+      #status {
+        margin-top: 0.75rem;
+        font-size: 0.85rem;
+        opacity: 0.75;
+        white-space: pre-wrap;
+      }
+      #files {
+        margin-top: 1rem;
+      }
+      #files button {
+        display: block;
+        width: 100%;
+        text-align: left;
+        margin: 0.25rem 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>TeraBox Player Example</h1>
+    <p>
+      A minimal example showing how to resolve a share link and play it back — falling back to HLS
+      (via <a href="https://github.com/video-dev/hls.js">hls.js</a>) for files a browser can't
+      decode natively, like MKV.
+    </p>
+
+    <label for="worker">Worker base URL</label>
+    <input id="worker" placeholder="https://your-worker.workers.dev" />
+
+    <label for="key">API key (only if your deployment requires one)</label>
+    <input id="key" type="password" placeholder="optional" />
+
+    <label for="link">TeraBox share link</label>
+    <input id="link" placeholder="https://terabox.com/s/1EXAMPLE" />
+
+    <label for="password">Share password (only if protected)</label>
+    <input id="password" placeholder="optional" />
+
+    <button id="resolve">Resolve</button>
+
+    <div id="status"></div>
+    <div id="files"></div>
+    <video id="video" controls></video>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      let hls = null;
+
+      function setStatus(text) {
+        $("status").textContent = text;
+      }
+
+      function authHeaders() {
+        const key = $("key").value.trim();
+        return key ? { Authorization: `Bearer ${key}` } : {};
+      }
+
+      function withKey(url) {
+        const key = $("key").value.trim();
+        if (!key) return url;
+        const u = new URL(url);
+        u.searchParams.set("key", key);
+        return u.toString();
+      }
+
+      async function resolveLink() {
+        const worker = $("worker").value.trim().replace(/\/$/, "");
+        const link = $("link").value.trim();
+        const password = $("password").value.trim();
+
+        if (!worker || !link) {
+          setStatus("Enter both a worker URL and a share link.");
+          return;
+        }
+
+        const params = new URLSearchParams({ link });
+        if (password) params.set("password", password);
+
+        setStatus("Resolving...");
+        $("files").innerHTML = "";
+
+        try {
+          const response = await fetch(`${worker}/api/resolve?${params}`, {
+            headers: authHeaders(),
+          });
+          const body = await response.json();
+
+          if (!response.ok) {
+            setStatus(`Error (${body.error.code}): ${body.error.message}`);
+            return;
+          }
+
+          setStatus(
+            `Resolved via '${body.share.strategy}' strategy — ${body.files.length} file(s).` +
+              (body.share.truncated ? "\n(listing was truncated by size/depth limits)" : ""),
+          );
+
+          renderFileList(body.files);
+          if (body.files.length > 0) play(body.files[0]);
+        } catch (err) {
+          setStatus(`Request failed: ${err.message}`);
+        }
+      }
+
+      function renderFileList(files) {
+        const container = $("files");
+        container.innerHTML = "";
+        if (files.length <= 1) return;
+
+        for (const file of files) {
+          const button = document.createElement("button");
+          button.textContent = `${file.file_name} (${file.file_size})`;
+          button.addEventListener("click", () => play(file));
+          container.appendChild(button);
+        }
+      }
+
+      function play(file) {
+        const video = $("video");
+
+        if (hls) {
+          hls.destroy();
+          hls = null;
+        }
+        video.removeAttribute("src");
+
+        setStatus((prev) => prev);
+
+        // Prefer HLS for anything a browser can't decode natively — it's the
+        // only path that plays MKV/AVI in a plain <video> element.
+        const nativelyPlayable = ["video/mp4", "video/webm", "video/quicktime"];
+
+        if (file.hls_url && !nativelyPlayable.includes(file.mime_type)) {
+          const manifestUrl = withKey(file.hls_url);
+
+          if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            // Safari and native iOS <video> can play HLS directly.
+            video.src = manifestUrl;
+          } else if (window.Hls && Hls.isSupported()) {
+            hls = new Hls();
+            hls.loadSource(manifestUrl);
+            hls.attachMedia(video);
+          } else {
+            setStatus(`No HLS support in this browser — falling back to direct stream.`);
+            video.src = withKey(file.stream_url);
+          }
+        } else {
+          video.src = withKey(file.stream_url);
+        }
+
+        video.play().catch(() => {
+          /* Autoplay may be blocked; the user can press play manually. */
+        });
+      }
+
+      $("resolve").addEventListener("click", resolveLink);
+      $("link").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") resolveLink();
+      });
+    </script>
+  </body>
+</html>

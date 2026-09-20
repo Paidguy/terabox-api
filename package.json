@@ -1,0 +1,45 @@
+{
+  "name": "terabox-api",
+  "version": "2.0.2",
+  "description": "A self-hosted Cloudflare Worker that resolves public TeraBox share links into file metadata, direct downloads, and HLS streams.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/paidguy/terabox-api.git"
+  },
+  "homepage": "https://github.com/paidguy/terabox-api#readme",
+  "bugs": "https://github.com/paidguy/terabox-api/issues",
+  "keywords": [
+    "terabox",
+    "cloudflare-workers",
+    "downloader",
+    "hls",
+    "streaming",
+    "api"
+  ],
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "smoke": "node scripts/smoke.mjs",
+    "check": "npm run typecheck && npm run lint && npm run format:check && wrangler deploy --dry-run"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.0.0",
+    "@eslint/js": "^9.0.0",
+    "eslint": "^10.0.0",
+    "prettier": "^3.0.0",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.0.0",
+    "wrangler": "^4.0.0"
+  }
+}
