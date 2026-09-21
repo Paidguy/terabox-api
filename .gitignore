@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Build output
+dist/
+
+# Logs
+npm-debug.log*
+*.log
+
+# Editor/OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Env files (never commit real secrets)
+.env
+.env.*
+!.env.example
+
+# Python (examples/python-requests.py)
+__pycache__/
+*.pyc

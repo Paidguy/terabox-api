@@ -1,0 +1,47 @@
+name = "terabox-api"
+main = "src/index.ts"
+compatibility_date = "2025-06-01"
+
+# ─── Required secret ──────────────────────────────────────────────────────────
+# Your TeraBox session cookie. Never a plaintext var — always a secret:
+#
+#   wrangler secret put TERABOX_COOKIE
+#
+# Accepts a bare ndus value, `ndus=VALUE`, or several comma-separated cookies
+# to rotate between accounts:
+#
+#   ndus=VALUE_A,ndus=VALUE_B,ndus=VALUE_C
+#
+# For local development put the same value in `.dev.vars` (gitignored) —
+# see `.dev.vars.example`.
+
+# ─── Optional secret ──────────────────────────────────────────────────────────
+# Lock the API down so only holders of a key can use it. Strongly recommended
+# for any deployment reachable from the public internet, since the worker
+# carries your TeraBox account cookie.
+#
+#   wrangler secret put API_KEY
+
+# ─── Optional tuning ──────────────────────────────────────────────────────────
+# All have working defaults; uncomment only what you want to change.
+#
+# [vars]
+# CACHE_TTL = "1800"          # Resolved-share cache lifetime, seconds.
+# RATE_LIMIT = "30"           # Requests per IP per window. "0" disables.
+# RATE_LIMIT_WINDOW = "60"    # Window length, seconds.
+
+# ─── Optional KV cache ────────────────────────────────────────────────────────
+# Without this, resolved shares are cached in per-isolate memory, which is
+# fine for personal use. Bind a KV namespace to share one cache across every
+# isolate and cut repeat resolves:
+#
+#   wrangler kv namespace create CACHE
+#
+# then paste the returned id below and uncomment.
+#
+# [[kv_namespaces]]
+# binding = "CACHE"
+# id = "your_namespace_id_here"
+
+[observability]
+enabled = true
